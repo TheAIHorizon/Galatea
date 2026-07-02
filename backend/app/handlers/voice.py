@@ -262,14 +262,14 @@ class VoiceHandler(BaseHandler):
         
         if ctx.settings.vision_enabled:
             try:
-                identity = await vision_live_service.get_current_identity()
-                if identity:
-                    if identity.get("is_owner"):
+                identity_name, identity_role = vision_live_service.get_current_identity()
+                if identity_name:
+                    if vision_live_service.is_owner_present():
                         access_mode = "full"
-                        user_name = identity.get("name")
-                    elif identity.get("role") in ["friend", "family"]:
+                        user_name = identity_name
+                    elif identity_role in ["friend", "family"]:
                         access_mode = "restricted"
-                        user_name = identity.get("name")
+                        user_name = identity_name
                     else:
                         access_mode = "denied"
             except Exception as e:
