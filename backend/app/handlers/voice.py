@@ -59,7 +59,7 @@ class VoiceHandler(BaseHandler):
         await ctx.send_status(Status.PROCESSING)
         
         try:
-            stt_provider = ctx.user_settings.stt_provider
+            stt_provider = ctx.settings.stt_provider
             
             if stt_provider == "parakeet":
                 # Try Parakeet first, fall back to Whisper if unavailable
