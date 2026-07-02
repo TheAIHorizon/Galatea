@@ -83,9 +83,17 @@ app = FastAPI(
 )
 
 # CORS middleware
+# Restricted to local frontend origins. The previous wildcard ("*") combined
+# with allow_credentials=True is invalid per the CORS spec and would let any
+# website in the user's browser script this unauthenticated API. The frontend
+# (Vite dev server and the Dockerized nginx) proxies /api and /ws same-origin,
+# so these entries only matter for direct cross-origin calls from the local UI.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
