@@ -236,7 +236,7 @@ class VoiceHandler(BaseHandler):
         
         # Get context for system prompt
         time_context = get_time_context()
-        user_profile_summary = user_profile_service.get_context_summary()
+        user_profile_summary = user_profile_service.get_profile_summary()
         
         # Vision context
         vision_context = ""
@@ -278,9 +278,9 @@ class VoiceHandler(BaseHandler):
         # Build system prompt
         user_location = getattr(ctx.settings, 'user_location', '')
         system_prompt = ollama_service.build_system_prompt(
-            name=ctx.settings.assistant_name,
+            assistant_name=ctx.settings.assistant_name,
             nickname=ctx.settings.assistant_nickname,
-            style=ctx.settings.response_style,
+            response_style=ctx.settings.response_style,
             time_context=time_context,
             user_profile=user_profile_summary if user_profile_summary else None,
             user_location=user_location,
