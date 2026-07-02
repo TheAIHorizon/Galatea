@@ -59,7 +59,7 @@ class VoiceHandler(BaseHandler):
         await ctx.send_status(Status.PROCESSING)
         
         try:
-            stt_provider = ctx.user_settings.stt_provider
+            stt_provider = ctx.settings.stt_provider
             
             if stt_provider == "parakeet":
                 # Try Parakeet first, fall back to Whisper if unavailable
@@ -236,7 +236,7 @@ class VoiceHandler(BaseHandler):
         
         # Get context for system prompt
         time_context = get_time_context()
-        user_profile_summary = user_profile_service.get_context_summary()
+        user_profile_summary = user_profile_service.get_profile_summary()
         
         # Vision context
         vision_context = ""
@@ -262,14 +262,14 @@ class VoiceHandler(BaseHandler):
         
         if ctx.settings.vision_enabled:
             try:
-                identity = await vision_live_service.get_current_identity()
-                if identity:
-                    if identity.get("is_owner"):
+                identity_name, identity_role = vision_live_service.get_current_identity()
+                if identity_name:
+                    if vision_live_service.is_owner_present():
                         access_mode = "full"
-                        user_name = identity.get("name")
-                    elif identity.get("role") in ["friend", "family"]:
+                        user_name = identity_name
+                    elif identity_role in ["friend", "family"]:
                         access_mode = "restricted"
-                        user_name = identity.get("name")
+                        user_name = identity_name
                     else:
                         access_mode = "denied"
             except Exception as e:
@@ -278,9 +278,9 @@ class VoiceHandler(BaseHandler):
         # Build system prompt
         user_location = getattr(ctx.settings, 'user_location', '')
         system_prompt = ollama_service.build_system_prompt(
-            name=ctx.settings.assistant_name,
+            assistant_name=ctx.settings.assistant_name,
             nickname=ctx.settings.assistant_nickname,
-            style=ctx.settings.response_style,
+            response_style=ctx.settings.response_style,
             time_context=time_context,
             user_profile=user_profile_summary if user_profile_summary else None,
             user_location=user_location,
@@ -324,7 +324,7 @@ class VoiceHandler(BaseHandler):
                 user_messages = [m for m in ctx.state.messages if m.get("role") == "user"]
                 if user_messages:
                     last_msg = user_messages[-1].get("content", "")
-                    detected_domain, confidence, voice_override = domain_router.detect_domain(last_msg)
+                    detected_domain, confidence, _specialist_model, voice_override = domain_router.detect_domain(last_msg)
                     
                     if detected_domain != Domain.GENERAL and confidence >= 0.6:
                         spec_models = ctx.settings.specialist_models

@@ -59,8 +59,8 @@ The easiest way to run Galatea - one command starts everything!
 
 ```bash
 # Clone the repository
-git clone https://github.com/lafintiger/galatea.git
-cd galatea
+git clone https://github.com/TheAIHorizon/Galatea.git
+cd Galatea
 
 # Start Galatea (uses your existing Ollama installation)
 docker compose up -d
@@ -354,8 +354,8 @@ ollama pull huihui_ai/qwen3-abliterated:4b  # Uncensored
 ### 3. Run Backend Locally (Development)
 
 ```bash
-git clone https://github.com/lafintiger/galatea.git
-cd galatea/backend
+git clone https://github.com/TheAIHorizon/Galatea.git
+cd Galatea/backend
 
 # Create and activate virtual environment
 python -m venv venv
@@ -365,13 +365,18 @@ source venv/bin/activate  # Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
 
 # Start backend
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8010
+# NOTE: binds to 127.0.0.1 (loopback) only. The API has no authentication,
+# so exposing it on all interfaces (0.0.0.0) would give your whole LAN
+# access to conversations, webcam capture, RAG memory, voice cloning, and
+# Docker/Home Assistant control. Only use --host 0.0.0.0 if you understand
+# and accept that exposure (e.g. behind your own reverse-proxy auth).
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8010
 ```
 
 ### 4. Run Frontend Locally (Development)
 
 ```bash
-cd galatea/frontend
+cd Galatea/frontend
 npm install
 npm run dev
 ```
@@ -387,8 +392,8 @@ Navigate to `http://localhost:5173` in your browser.
 Create a `.env` file in the `backend` directory:
 
 ```env
-OLLAMA_HOST=http://localhost:11434
-DEFAULT_MODEL=ministral-3:8b
+OLLAMA_BASE_URL=http://localhost:11434
+DEFAULT_MODEL=ministral-3:3b
 WHISPER_HOST=localhost
 WHISPER_PORT=10300
 PIPER_HOST=localhost
@@ -426,7 +431,7 @@ docker logs piper
 ## Project Structure
 
 ```
-galatea/
+Galatea/
 ├── backend/                 # Python FastAPI backend
 │   ├── app/
 │   │   ├── main.py         # FastAPI app entry

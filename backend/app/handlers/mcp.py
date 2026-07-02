@@ -131,12 +131,11 @@ class MCPHandler(BaseHandler):
             return f"Multiple matches found: {names}. Please be more specific."
         
         container = matches[0]
-        success = await docker_service.restart_container(container.name)
-        
-        if success:
-            return f"Restarted container {container.name}."
-        else:
-            return f"Failed to restart {container.name}."
+        success, message = await docker_service.restart_container(container.name)
+        return message if message else (
+            f"Restarted container {container.name}." if success
+            else f"Failed to restart {container.name}."
+        )
     
     async def _docker_status(self, command: dict) -> str:
         """Get Docker container status."""
@@ -151,10 +150,14 @@ class MCPHandler(BaseHandler):
             return f"I couldn't find a container matching '{container_name}'."
         
         container = matches[0]
-        stats = await docker_service.get_container_stats(container.name)
-        
-        if stats:
-            return f"{container.name} is {container.status}. CPU: {stats.get('cpu', 'N/A')}, Memory: {stats.get('memory', 'N/A')}"
+        health = await docker_service.get_container_health(container.name)
+
+        if health and "error" not in health:
+            return (
+                f"{container.name} is {health['status']}. "
+                f"CPU: {health['cpu_percent']}%, Memory: {health['memory_mb']}MB "
+                f"({health['memory_percent']}%)"
+            )
         else:
             return f"{container.name} is {container.status}."
     
@@ -173,9 +176,9 @@ class MCPHandler(BaseHandler):
             return f"I couldn't find a container matching '{container_name}'."
         
         container = matches[0]
-        logs = await docker_service.get_container_logs(container.name, tail=lines)
-        
-        if logs:
+        success, logs = await docker_service.get_logs(container.name, tail=lines)
+
+        if success and logs:
             # Truncate for speech
             if len(logs) > 500:
                 return f"Here are the recent logs for {container.name}: {logs[:500]}..."
@@ -186,111 +189,115 @@ class MCPHandler(BaseHandler):
     # =========================================
     # Home Assistant Methods
     # =========================================
-    
-    async def _ha_turn_on(self, command: dict) -> str:
-        """Turn on a Home Assistant device."""
-        if not ha_service.is_available:
-            return "Home Assistant is not configured. Please set HA_URL and HA_TOKEN in your environment."
-        
+
+    async def _ha_resolve_entity_id(self, command: dict) -> str:
+        """Resolve an entity_id from the command, looking it up by device name if needed."""
         entity_id = command.get("entity_id", "")
         device_name = command.get("device", "")
-        
-        # Find entity by name if entity_id not provided
+
         if not entity_id and device_name:
-            entity_id = await ha_service.find_entity_by_name(device_name)
-        
+            states = await ha_service.get_states()
+            match = ha_service.find_entity_by_name(states, device_name)
+            entity_id = match.entity_id if match else ""
+
+        return entity_id
+
+    async def _ha_turn_on(self, command: dict) -> str:
+        """Turn on a Home Assistant device."""
+        if not ha_service.is_configured:
+            return "Home Assistant is not configured. Please set HA_URL and HA_TOKEN in your environment."
+
+        device_name = command.get("device", "")
+        entity_id = await self._ha_resolve_entity_id(command)
+
         if not entity_id:
             return f"I couldn't find a device called '{device_name}'."
-        
-        success = await ha_service.turn_on(entity_id)
-        
+
+        success, message = await ha_service.turn_on(entity_id)
+
         if success:
             return f"Turned on {device_name or entity_id}."
         else:
-            return f"Failed to turn on {device_name or entity_id}."
-    
+            return f"Failed to turn on {device_name or entity_id}: {message}"
+
     async def _ha_turn_off(self, command: dict) -> str:
         """Turn off a Home Assistant device."""
-        if not ha_service.is_available:
+        if not ha_service.is_configured:
             return "Home Assistant is not configured."
-        
-        entity_id = command.get("entity_id", "")
+
         device_name = command.get("device", "")
-        
-        if not entity_id and device_name:
-            entity_id = await ha_service.find_entity_by_name(device_name)
-        
+        entity_id = await self._ha_resolve_entity_id(command)
+
         if not entity_id:
             return f"I couldn't find a device called '{device_name}'."
-        
-        success = await ha_service.turn_off(entity_id)
-        
+
+        success, message = await ha_service.turn_off(entity_id)
+
         if success:
             return f"Turned off {device_name or entity_id}."
         else:
-            return f"Failed to turn off {device_name or entity_id}."
-    
+            return f"Failed to turn off {device_name or entity_id}: {message}"
+
     async def _ha_set_temperature(self, command: dict) -> str:
         """Set thermostat temperature."""
-        if not ha_service.is_available:
+        if not ha_service.is_configured:
             return "Home Assistant is not configured."
-        
+
         temperature = command.get("temperature")
-        entity_id = command.get("entity_id", "")
-        
+        entity_id = await self._ha_resolve_entity_id(command)
+
         if not temperature:
             return "Please specify a temperature."
-        
-        success = await ha_service.set_temperature(entity_id, float(temperature))
-        
+
+        if not entity_id:
+            device_name = command.get("device", "")
+            return f"I couldn't find a device called '{device_name}'."
+
+        success, message = await ha_service.set_temperature(entity_id, float(temperature))
+
         if success:
             return f"Set temperature to {temperature} degrees."
         else:
-            return f"Failed to set temperature."
-    
+            return f"Failed to set temperature: {message}"
+
     async def _ha_get_state(self, command: dict) -> str:
         """Get state of a Home Assistant entity."""
-        if not ha_service.is_available:
+        if not ha_service.is_configured:
             return "Home Assistant is not configured."
-        
-        entity_id = command.get("entity_id", "")
+
         device_name = command.get("device", "")
-        
-        if not entity_id and device_name:
-            entity_id = await ha_service.find_entity_by_name(device_name)
-        
+        entity_id = await self._ha_resolve_entity_id(command)
+
         if not entity_id:
             return f"I couldn't find a device called '{device_name}'."
-        
+
         state = await ha_service.get_state(entity_id)
-        
+
         if state:
-            return f"{device_name or entity_id} is {state.get('state', 'unknown')}."
+            return f"{device_name or entity_id} is {state.state}."
         else:
             return f"Couldn't get state for {device_name or entity_id}."
-    
+
     async def _ha_list_devices(self) -> str:
         """List Home Assistant devices."""
-        if not ha_service.is_available:
+        if not ha_service.is_configured:
             return "Home Assistant is not configured."
-        
-        devices = await ha_service.list_devices()
-        
+
+        devices = await ha_service.get_states()
+
         if not devices:
             return "No devices found in Home Assistant."
-        
+
         # Group by domain
         by_domain = {}
         for d in devices[:20]:  # Limit for speech
-            domain = d.get("entity_id", "").split(".")[0]
-            if domain not in by_domain:
-                by_domain[domain] = []
-            by_domain[domain].append(d.get("name", d.get("entity_id")))
-        
+            domain = d.entity_id.split(".")[0]
+            by_domain.setdefault(domain, []).append(d.friendly_name or d.entity_id)
+
         parts = []
         for domain, names in by_domain.items():
             parts.append(f"{domain}: {', '.join(names[:5])}")
-        
+
         return "Available devices: " + "; ".join(parts)
     
     async def _speak(self, ctx: HandlerContext, text: str) -> None:
