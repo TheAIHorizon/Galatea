@@ -31,9 +31,11 @@ export default {
           purple: '#a855f7',
         }
       },
+      // No remote fonts: Orbitron/Rajdhani are used only if installed locally;
+      // otherwise the system font stack is used (zero external requests).
       fontFamily: {
-        'display': ['Orbitron', 'sans-serif'],
-        'body': ['Rajdhani', 'sans-serif'],
+        'display': ['Orbitron', 'Avenir Next', 'Futura', '-apple-system', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        'body': ['Rajdhani', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
       animation: {
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',

@@ -7,7 +7,12 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
     # Server
-    host: str = "0.0.0.0"
+    # Bind to loopback by default: the API has no authentication, so exposing
+    # it on all interfaces (0.0.0.0) would give the whole LAN access to
+    # conversations, webcam capture, RAG memory, voice cloning, and
+    # Docker/Home Assistant control. Set HOST=0.0.0.0 explicitly (e.g. in
+    # .env or a container) only if you understand that exposure.
+    host: str = "127.0.0.1"
     port: int = 8000
     debug: bool = True
     

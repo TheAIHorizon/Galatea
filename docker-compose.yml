@@ -39,7 +39,14 @@ services:
     build: ./backend
     container_name: galatea-backend
     ports:
-      - "8010:8010"
+      # Published on loopback only: the backend API has no authentication.
+      # Inside the container it must bind 0.0.0.0 (see backend/Dockerfile),
+      # but the host-side publish is restricted to 127.0.0.1 so it is not
+      # reachable from the LAN by default. If you deliberately want LAN
+      # access, change this mapping explicitly (e.g. "8010:8010") and
+      # understand that anyone on the network gets full unauthenticated
+      # access to conversations, memory, webcam, and Docker/HA control.
+      - "127.0.0.1:8010:8010"
     environment:
       # Timezone - match your local timezone
       - TZ=${TZ:-America/Los_Angeles}
