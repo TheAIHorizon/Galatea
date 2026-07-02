@@ -324,7 +324,7 @@ class VoiceHandler(BaseHandler):
                 user_messages = [m for m in ctx.state.messages if m.get("role") == "user"]
                 if user_messages:
                     last_msg = user_messages[-1].get("content", "")
-                    detected_domain, confidence, voice_override = domain_router.detect_domain(last_msg)
+                    detected_domain, confidence, _specialist_model, voice_override = domain_router.detect_domain(last_msg)
                     
                     if detected_domain != Domain.GENERAL and confidence >= 0.6:
                         spec_models = ctx.settings.specialist_models
