@@ -515,7 +515,10 @@ docker rm -f wyoming-whisper piper
 
 ## License
 
-MIT
+**Polyform Noncommercial License 1.0.0** — free for personal, educational, research, and other
+noncommercial use; commercial use requires a separate license from the copyright holder. See
+[LICENSE](LICENSE) for the full text. (The README previously said "MIT"; that was a documentation
+error — the repository has always shipped Polyform Noncommercial.)
 
 ---
 
